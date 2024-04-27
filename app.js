@@ -1,5 +1,6 @@
 const { MongoClient } = require('mongodb');
 const express = require('express');
+const router = require('./app/routes/router');
 
 const app = express();
 const port = 3000;
@@ -41,6 +42,8 @@ app.use(async (req, res, next) => {
     res.status(500).send('Internal Server Error');
   }
 });
+
+app.use('/', router);
 
 // Start the server
 app.listen(port, () => {
