@@ -1,42 +1,38 @@
 const { MongoClient } = require('mongodb');
 const express = require('express');
 const router = require('./app/routes/router');
-
+const path = require('path');
 const app = express();
 const port = 3000;
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // MongoDB URI'si
 const uri = "mongodb://localhost:27017/cryptographyDB";
 
-async function checkMongoDBConnection() {
-  try {
-    const client = new MongoClient(uri);
+// MongoDB bağlantısını başlat
+const client = new MongoClient(uri);
 
-    // Bağlantıyı başlat
-    await client.connect();
+let connected = false;
 
-    // Bağlantı durumunu kontrol etmek için bir test sorgusu gönder
-    const database = client.db();
-    const collections = await database.listCollections().toArray();
-
-    // Bağlantı başarılı ise koleksiyonların listesi konsola yazdırılır
-    console.log("MongoDB bağlantısı başarılı. Koleksiyonlar:");
-    collections.forEach(collection => {
-      console.log(collection.name);
-    });
-
-    // Bağlantıyı kapat
-    await client.close();
-  } catch (error) {
+client.connect()
+  .then(() => {
+    console.log("MongoDB bağlantısı başarılı.");
+    connected = true;
+  })
+  .catch((error) => {
     console.error('MongoDB bağlantısı sırasında bir hata oluştu:', error);
-  }
-}
+  });
 
 // Middleware for MongoDB connection check
 app.use(async (req, res, next) => {
   try {
-    await checkMongoDBConnection();
-    next();
+    if (!connected) {
+      console.error('MongoDB bağlantısı başarısız.');
+      res.status(500).send('Internal Server Error');
+    } else {
+      next();
+    }
   } catch (error) {
     console.error('MongoDB bağlantısı sırasında bir hata oluştu:', error);
     res.status(500).send('Internal Server Error');
@@ -44,6 +40,11 @@ app.use(async (req, res, next) => {
 });
 
 app.use('/', router);
+
+app.set("view engine", "ejs"); // Defining the image engine
+app.set("views", path.join(__dirname, "app", "views")); // Specifying the folder where the images will be located
+
+app.use("/public", express.static(path.join(__dirname, "public"))); // Accessing the Public folder (this process is called mapping)
 
 // Start the server
 app.listen(port, () => {

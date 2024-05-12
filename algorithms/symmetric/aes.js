@@ -1,58 +1,69 @@
-const MongoClient = require('mongodb').MongoClient;
+// aes.js
 const crypto = require('crypto');
+const fs = require('fs');
 
-// AES için kullanılacak anahtar (32 byte - 256 bit)
-const key = Buffer.from('your_32_byte_key_here', 'utf-8');
+async function encrypt(jsonDataFileName) {
+  return new Promise((resolve, reject) => {
+    try {
+      // Rastgele bir initialization vector (IV) oluştur
+      const iv = crypto.randomBytes(16);
 
-// Şifreleme fonksiyonu
-function encrypt(data) {
-    const iv = crypto.randomBytes(16); // Rastgele ilklendirme vektörü (IV)
-    const cipher = crypto.createCipheriv('aes-256-cbc', key, iv);
-    let encrypted = cipher.update(data, 'utf-8', 'hex');
-    encrypted += cipher.final('hex');
-    return iv.toString('hex') + ':' + encrypted; // IV'ü şifreli metnin başına ekle
+      // Şifreleme anahtarı (256 bit için 32 bayt)
+      const key = crypto.randomBytes(32); 
+
+      // Şifreleyici nesnesini oluştur
+      const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
+
+      // Dosyayı oku ve şifrele
+      const input = fs.createReadStream(`uploads/${jsonDataFileName}`);
+      let encryptedData = '';
+      input.pipe(cipher)
+        .on('data', chunk => encryptedData += chunk.toString('hex'))
+        .on('end', () => {
+          const keyBase64 = key.toString('base64');
+          resolve({
+            encryptedData: encryptedData,
+            key: keyBase64
+          });
+        })
+        .on('error', reject);
+    } catch (error) {
+      reject(error);
+    }
+  });
 }
 
-// Çözme fonksiyonu
-function decrypt(data) {
-    const parts = data.split(':');
-    const iv = Buffer.from(parts[0], 'hex');
-    const encryptedText = parts[1];
-    const decipher = crypto.createDecipheriv('aes-256-cbc', key, iv);
-    let decrypted = decipher.update(encryptedText, 'hex', 'utf-8');
-    decrypted += decipher.final('utf-8');
-    return decrypted;
+async function decrypt(encryptedFileName, key) {
+  return new Promise((resolve, reject) => {
+    try {
+      // Use the same IV and key that were used for encryption
+      const iv = crypto.randomBytes(16);
+
+      // Create a Decipheriv object
+      const decipher = crypto.createDecipheriv('aes-256-gcm', Buffer.from(key, 'base64'), iv);
+
+      // Read and decrypt the file
+      const input = fs.createReadStream(`encrypted/${encryptedFileName}`);
+      const output = fs.createWriteStream(`decrypted/${encryptedFileName}`);
+      input.pipe(decipher).pipe(output);
+
+      output.on('finish', () => {
+        // Return the decrypted data
+        resolve(fs.readFileSync(`decrypted/${encryptedFileName}`));
+      });
+
+      output.on('error', (error) => {
+        console.error('Decryption error:', error);
+        reject(error);
+      });
+    } catch (error) {
+      console.error('Decryption error:', error);
+      reject(error);
+    }
+  });
 }
 
-async function processCollection(uri, dbName, collectionName, fields, action) {
-    const client = await MongoClient.connect(uri);
-    const db = client.db(dbName);
-    const collection = db.collection(collectionName);
-
-    // Güncelleme sorgusu oluştur
-    const updateQuery = { $set: {} };
-    fields.forEach(field => {
-        updateQuery.$set[field] = { $function: {
-            body: function(value) { return action === 'encrypt' ? encrypt(value) : decrypt(value); },
-            args: ["$" + field],
-            lang: "js"
-        }};
-    });
-
-    // Güncelleme sorgusunu çalıştır
-    const result = await collection.updateMany({}, updateQuery);
-    console.log(`${result.modifiedCount} documents ${action}ed in ${collectionName}`);
-
-    await client.close();
-}
-
-// Kullanıcıdan veritabanı bilgilerini ve işlemi al
-const uri = "mongodb+srv://username:password@your-cluster.mongodb.net/test";
-const dbName = "your_database";
-const collectionName = "your_collection";
-const fields = ["field1", "field2", "field3"]; // Kullanıcıdan alınacak
-const action = "encrypt"; // Kullanıcıdan alınacak
-
-// İşlemi başlat
-processCollection(uri, dbName, collectionName, fields, action)
-    .catch(err => console.error(err));
+module.exports = {
+  encrypt,
+  decrypt
+};
