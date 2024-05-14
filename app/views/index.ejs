@@ -183,6 +183,7 @@
 <!-------Features End-------> 
 
 
+
 <!------- Upload & Encrypt Start------->
 <section class="testimonial section-padding" data-scroll-index='4'>
   <div class="container">
@@ -208,7 +209,6 @@
                     <select class="form-control" id="encryptionAlgorithm" name="encryptionAlgorithm">
                       <option value="AES">AES</option>
                       <option value="TDEA">TDEA</option>
-                      <option value="DSA">DSA</option>
                       <option value="ECC">ECC</option>
                       <option value="RSA">RSA</option>
                     </select>
@@ -220,7 +220,8 @@
               <!-- Indirme linklerini buraya ekleyin -->
               <div id="downloadLinks" style="display: none;">
                 <a id="encryptedDownloadLink" href="#">Download Encrypted File</a><br>
-                <a id="keyDownloadLink" href="#">Download Key File</a>
+                <a id="keyDownloadLink" href="#">Download Key File</a><br>
+                <a id="ivDownloadLink" href="#">Download IV File</a><br> <!-- Added line for IV download -->
               </div>
             </div>  
           </div>
@@ -248,10 +249,12 @@
           var filename = JSON.parse(this.response).filename;
           var encryptedLink = '/download-encrypted/' + filename;
           var keyLink = '/download-key/' + filename;
+          var ivLink = '/download-iv/' + filename; // Added line for IV download
           
           // indirme linklerini oluştur ve sayfaya ekle
           document.getElementById('encryptedDownloadLink').href = encryptedLink;
           document.getElementById('keyDownloadLink').href = keyLink;
+          document.getElementById('ivDownloadLink').href = ivLink; // Added line for IV download
           document.getElementById('downloadLinks').style.display = 'block';
         } else {
           // hata mesajını göster
@@ -273,26 +276,43 @@
         <div class="sectioner-header text-center">
           <h3>Upload & Decrypt Database</h3>
           <span class="line"></span>
-          <p>To decrypt the database, first upload the encrypted database file (as a json file), then enter the decryption key</p>
+          <p>To decrypt the database, first upload the encrypted database file (as a json file), then select the decryption algorithm and enter the decryption key and IV</p>
         </div>
         <div class="section-content">
           <div class="row">
             <div class="offset-md-2 col-md-8 col-sm-12">
-              <form id="decryptForm" action="/decrypt-collection" method="POST" enctype="multipart/form-data" onsubmit="return confirmDecrypt()">
+              <form id="decryptForm" action="/decrypt-collection" method="POST" enctype="multipart/form-data" onsubmit="decryptData(event)">
                 <div class="form-group">
                   <label for="encryptedFile" class="custom-file-upload">Choose Encrypted File</label>
                   <input type="file" class="form-control-file" id="encryptedFile" name="encryptedFile" required>
                 </div>
+                <div class="form-group">
+                  <label for="decryptionKey">Enter Decryption Key</label>
+                  <input type="text" class="form-control" id="decryptionKey" name="decryptionKey" required>
+                </div>
+                <div class="form-group">
+                  <label for="decryptionIV">Enter Decryption IV</label>
+                  <input type="text" class="form-control" id="decryptionIV" name="decryptionIV" required>
+                </div>
                 <button type="button" class="btn btn-primary" onclick="showDecryptConfirmation()">Next</button>
                 <div id="decryptConfirmation" style="display: none;">
                   <div class="form-group">
-                    <label for="decryptionKey">Decryption Key:</label>
-                    <input type="password" class="form-control" id="decryptionKey" name="decryptionKey" required>
+                    <label for="decryptionAlgorithm">Decryption Algorithm:</label>
+                    <select class="form-control" id="decryptionAlgorithm" name="decryptionAlgorithm" required>
+                      <option value="AES">AES</option>
+                      <option value="TDEA">TDEA</option>
+                      <option value="ECC">ECC</option>
+                      <option value="RSA">RSA</option>
+                    </select>
                   </div>
-                  <button type="submit" class="btn btn-primary">Decrypt & Download</button>
+                  <button type="submit" class="btn btn-primary">Decrypt</button>
                   <button type="button" class="btn btn-secondary" onclick="hideDecryptConfirmation()">Back</button>
                 </div>
               </form>
+              <!-- Add download link here -->
+              <div id="decryptDownloadLink" style="display: none;">
+                <a id="decryptedDownloadLink" href="#">Download Decrypted File</a>
+              </div>
             </div>
           </div>
         </div>
@@ -308,12 +328,32 @@
       document.getElementById('decryptConfirmation').style.display = 'none';
     }
   
-    function confirmDecrypt() {
-      return confirm('Are you sure you want to decrypt the database?');
+    function decryptData(event) {
+      event.preventDefault(); // prevent the form from submitting normally
+
+      var formData = new FormData(document.getElementById('decryptForm'));
+      var xhr = new XMLHttpRequest();
+      xhr.open('POST', '/decrypt-collection', true);
+      xhr.onload = function () {
+        if (this.status == 200) {
+          var filename = JSON.parse(this.response).filename;
+          var decryptedLink = '/download-decrypted/' + filename;
+          
+        // create the download link and add it to the page
+        document.getElementById('decryptedDownloadLink').href = decryptedLink;
+        document.getElementById('decryptDownloadLink').style.display = 'block';
+        } else {
+          // show error message
+          alert('Error: ' + this.response);
+        }
+      };
+      xhr.send(formData);
     }
   </script>
 </section>
 <!------- Upload & Decrypt End------->
+
+
 
 <!-------Contact Start------->
 <section class="contact section-padding" data-scroll-index='6'>

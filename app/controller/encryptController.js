@@ -1,64 +1,54 @@
-const fs = require('fs');
+const fs = require('fs').promises;
 const path = require('path');
-const aes = require('../../algorithms/symmetric/aes');
-const tdea = require('../../algorithms/symmetric/tdea');
-const dsa = require('../../algorithms/asymmetric/dsa');
-const ecc = require('../../algorithms/asymmetric/ecc');
-const rsa = require('../../algorithms/asymmetric/rsa');
 
-// Veriyi şifrelemek için seçilen algoritmayı kullan
+const algorithms = {
+  'AES': require('../../algorithms/symmetric/aes'),
+  'TDEA': require('../../algorithms/symmetric/tdea'),
+  'ECC': require('../../algorithms/asymmetric/ecc'),
+  'RSA': require('../../algorithms/asymmetric/rsa'),
+};
+
 async function encryptData(jsonDataFileName, encryptionAlgorithm) {
-  let encryptedData;
-  
-  console.log("JSON Dosyası: ", jsonDataFileName);
-  console.log("Şifreleme Algoritması: ", encryptionAlgorithm);
+  try {
+    console.log('-------- Şifreleme İşlemi Başladı --------');
+    console.log('Dosya Adı:', jsonDataFileName.filename);
+    console.log('Şifreleme Algoritması:', encryptionAlgorithm);
 
-  // Dosyayı oku
-  const jsonDataBuffer = fs.readFileSync(`uploads/${jsonDataFileName.filename}`);
-  // Buffer'ı string'e dönüştür
-  const jsonString = jsonDataBuffer.toString();
-  // String'i JSON'a dönüştür
-  const jsonData = JSON.parse(jsonString);
+    const jsonDataBuffer = await fs.readFile(`uploads/${jsonDataFileName.filename}`);
+    const jsonString = jsonDataBuffer.toString();
+    console.log('Okunan JSON Verisi:', jsonString);
 
-  switch (encryptionAlgorithm) {
-    case 'AES':
-      console.log("AES seçildi.");
-      const result = await aes.encrypt(jsonDataFileName.filename);
-      encryptedData = result.encryptedData;
-      console.log("Şifrelenmiş Veri: ", encryptedData);
-      console.log("Anahtar: ", result.key);
+    const jsonData = JSON.parse(jsonString);
+    console.log('Parse Edilmiş JSON Verisi:', jsonData);
 
-      // Şifrelenmiş veriyi ve anahtarı dosyaya yaz
-      fs.writeFileSync(path.join(__dirname, `../../encrypted/${jsonDataFileName.filename}_encrypted.txt`), encryptedData);
-      fs.writeFileSync(path.join(__dirname, `../../encrypted/${jsonDataFileName.filename}_key.txt`), result.key);
-      break;
+    const algorithm = algorithms[encryptionAlgorithm];
+    if (!algorithm) {
+      throw new Error('Geçersiz şifreleme algoritması');
+    }
 
-    case 'TDEA':
-      console.log("TDEA seçildi.");
-      encryptedData = await tdea.encrypt(jsonData);
-      console.log("Şifrelenmiş Veri: ", encryptedData);
-      break;
+    const result = await algorithm.encrypt(jsonData);
+    console.log('Şifrelenmiş Veri:', result.encryptedData.toString('hex')); // Hex formatında konsola yazdır
+    console.log('Anahtar:', result.key);
+    if (result.iv) {
+      console.log('IV:', result.iv);
+    }
 
-    case 'DSA':
-      console.log("DSA seçildi.");
-      encryptedData = await dsa.encrypt(jsonData);
-      console.log("Şifrelenmiş Veri: ", encryptedData);
-      break;
+    const encryptedFilePath = path.join(__dirname, `../../encrypted/${jsonDataFileName.filename}_encrypted.txt`);
+    const keyFilePath = path.join(__dirname, `../../encrypted/${jsonDataFileName.filename}_key.txt`);
+    const ivFilePath = path.join(__dirname, `../../encrypted/${jsonDataFileName.filename}_iv.txt`);
 
-    case 'ECC':
-      console.log("ECC seçildi.");
-      encryptedData = await ecc.encrypt(jsonData);
-      console.log("Şifrelenmiş Veri: ", encryptedData);
-      break;
-      
-    case 'RSA':
-      console.log("RSA seçildi.");
-      encryptedData = await rsa.encrypt(jsonData);
-      console.log("Şifrelenmiş Veri: ", encryptedData);
-      break;
+    await Promise.all([
+      fs.writeFile(encryptedFilePath, result.encryptedData.toString('hex'), 'hex'), // Hex encoding ile yaz
+      fs.writeFile(keyFilePath, result.key, 'utf-8'), 
+      fs.writeFile(ivFilePath, result.iv, 'utf-8'), 
+    ]);
+
+    console.log('-------- Şifreleme İşlemi Tamamlandı --------');
+    return result.encryptedData;
+  } catch (error) {
+    console.error('Şifreleme Hatası:', error);
+    throw error;
   }
-
-  return encryptedData;
 }
 
 module.exports = {

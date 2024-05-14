@@ -1,44 +1,44 @@
-const fs = require('fs');
-const aes = require('../../algorithms/symmetric/aes');
-const tdea = require('../../algorithms/symmetric/tdea');
-const dsa = require('../../algorithms/asymmetric/dsa');
-const ecc = require('../../algorithms/asymmetric/ecc');
-const rsa = require('../../algorithms/asymmetric/rsa');
+const fs = require('fs').promises;
+const path = require('path');
 
-// Veriyi şifre çözmek için seçilen algoritmayı kullan
-async function decryptData(encryptedFileName, decryptionKey) {
-  let decryptedData;
-  
-  console.log("Şifreli Dosya: ", encryptedFileName);
-  console.log("Şifre Çözme Anahtarı: ", decryptionKey);
+const algorithms = {
+  'AES': require('../../algorithms/symmetric/aes'),
+  'TDEA': require('../../algorithms/symmetric/tdea'),
+  'ECC': require('../../algorithms/asymmetric/ecc'),
+  'RSA': require('../../algorithms/asymmetric/rsa'),
+};
 
-  // Dosyayı oku
-  const encryptedData = fs.readFileSync(`encrypted/${encryptedFileName}`);
+async function decryptData(encryptedFileName, decryptionAlgorithm, decryptionKey, decryptionIV) {
+  try {
+    console.log('-------- Şifre Çözme İşlemi Başladı --------');
+    console.log('Dosya Adı:', encryptedFileName.filename);
+    console.log('Şifre Çözme Algoritması:', decryptionAlgorithm);
+    console.log('Anahtar:', decryptionKey);
+    console.log('IV:', decryptionIV);
 
-  switch (decryptionKey) {
-    case 'AES':
-      console.log("AES seçildi.");
-      decryptedData = await aes.decrypt(encryptedData);
-      break;
-    case 'TDEA':
-      console.log("TDEA seçildi.");
-      decryptedData = await tdea.decrypt(encryptedData);
-      break;
-    case 'DSA':
-      console.log("DSA seçildi.");
-      decryptedData = await dsa.decrypt(encryptedData);
-      break;
-    case 'ECC':
-      console.log("ECC seçildi.");
-      decryptedData = await ecc.decrypt(encryptedData);
-      break;
-    case 'RSA':
-      console.log("RSA seçildi.");
-      decryptedData = await rsa.decrypt(encryptedData);
-      break;
+    const encryptedFilePath = path.join(__dirname, `../../uploads/${encryptedFileName.filename}`);
+    const encryptedDataBuffer = await fs.readFile(encryptedFilePath, 'utf8');
+    const encryptedData = Buffer.from(encryptedDataBuffer, 'hex'); // Hex'ten Buffer'a dönüştür
+
+    const algorithm = algorithms[decryptionAlgorithm];
+    if (!algorithm) {
+      throw new Error('Geçersiz şifre çözme algoritması');
+    }
+
+    const decryptedData = await algorithm.decrypt(encryptedData, decryptionKey, decryptionIV);
+    console.log('Çözülmüş Veri:', decryptedData);
+
+    // Çözülmüş veriyi istediğiniz şekilde kullanabilirsiniz.
+    // Örneğin, JSON dosyasına kaydedebilirsiniz:
+    const decryptedFilePath = path.join(__dirname, `../../decrypted/${encryptedFileName.filename}_decrypted.json`);
+    await fs.writeFile(decryptedFilePath, JSON.stringify(decryptedData, null, 2), 'utf-8');
+
+    console.log('-------- Şifre Çözme İşlemi Tamamlandı --------');
+    return decryptedData;
+  } catch (error) {
+    console.error('Şifre Çözme Hatası:', error);
+    throw error;
   }
-
-  return decryptedData;
 }
 
 module.exports = {
