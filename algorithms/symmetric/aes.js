@@ -1,39 +1,55 @@
 const crypto = require('crypto');
 const fs = require('fs').promises;
 
+// Define key and iv as constants
+const key = Buffer.from('0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef', 'hex'); // AES için 256 bit anahtar (32 byte)
+const iv = Buffer.from('0123456789abcdef0123456789abcdef', 'hex'); // AES için 128 bit IV (16 byte)
+
 async function encrypt(jsonData) {
   try {
-    const key = crypto.randomBytes(32);
-    const iv = crypto.randomBytes(16);
+    console.time('AES Encryption Time');
+    const initialMemoryUsage = process.memoryUsage().heapUsed;
+    const startCpuUsage = process.cpuUsage();
+
     const cipher = crypto.createCipheriv('aes-256-cbc', key, iv);
     let encryptedData = cipher.update(Buffer.from(JSON.stringify(jsonData), 'utf8'));
     encryptedData = Buffer.concat([encryptedData, cipher.final()]);
 
-    return {
-      // encryptedData'yı hex string'e dönüştürün
-      encryptedData: encryptedData.toString('hex'),
-      key: key.toString('base64'),
-      iv: iv.toString('hex')
-    };
+    console.timeEnd('AES Encryption Time');
+    console.log('AES Encryption Memory Usage:', process.memoryUsage().heapUsed - initialMemoryUsage, 'bytes');
+    const cpuUsage = process.cpuUsage(startCpuUsage);
+    console.log('AES Encryption CPU Usage:', cpuUsage.user + cpuUsage.system, 'microseconds' + "\n");
+
+    return encryptedData.toString('hex'); // Convert encryptedData to hexadecimal string
   } catch (error) {
     console.error('Şifreleme Hatası:', error);
     throw new Error('Şifreleme işlemi sırasında bir hata oluştu.');   
   }
 }
 
-async function decrypt(encryptedData, keyBase64, ivHex) {
+async function decrypt(encryptedData) {
   try {
-    const key = Buffer.from(keyBase64, 'base64');
-    const iv = Buffer.from(ivHex, 'hex');
+    console.time('AES Decryption Time');
+    const initialMemoryUsage = process.memoryUsage().heapUsed;
+    const startCpuUsage = process.cpuUsage();
 
     const decipher = crypto.createDecipheriv('aes-256-cbc', key, iv);
-    let decryptedData = decipher.update(encryptedData);
+    let decryptedData = decipher.update(Buffer.from(encryptedData, 'hex')); // Convert encryptedData from hexadecimal string to Buffer
     decryptedData = Buffer.concat([decryptedData, decipher.final()]);
 
-    return JSON.parse(decryptedData.toString('utf8')); // JSON'a dönüştür
+    console.timeEnd('AES Decryption Time');
+    console.log('AES Decryption Memory Usage:', process.memoryUsage().heapUsed - initialMemoryUsage, 'bytes');
+    const cpuUsage = process.cpuUsage(startCpuUsage);
+    console.log('AES Decryption CPU Usage:', cpuUsage.user + cpuUsage.system, 'microseconds');
+
+    return JSON.parse(decryptedData.toString('utf8')); // Convert to JSON object
   } catch (error) {
     console.error('Şifre Çözme Hatası:', error);
-    throw new Error('Şifre çözme işlemi sırasında bir hata oluştu.');
+    if (error.code === 'ERR_OSSL_EVP_BAD_DECRYPT') {
+      throw new Error('Geçersiz anahtar veya IV.');
+    } else {
+      throw new Error('Şifre çözme işlemi sırasında bir hata oluştu.');
+    }
   }
 }
 

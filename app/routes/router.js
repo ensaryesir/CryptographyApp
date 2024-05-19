@@ -1,10 +1,21 @@
+const fs = require('fs').promises;
 const express = require('express');
 const multer = require('multer');
 const encryptController = require('../controller/encryptController');
 const decryptController = require('../controller/decryptController');
 const path = require('path');
-const upload = multer({ dest: 'uploads/' });
 const router = express.Router();
+
+const storage = multer.diskStorage({
+  destination: function(req, file, cb) {
+    cb(null, 'uploads/')
+  },
+  filename: function(req, file, cb) {
+    cb(null, file.originalname)
+  }
+})
+
+const upload = multer({ storage: storage })
 
 // Ana sayfa için GET isteği
 router.get('/', (req, res) => {
@@ -18,24 +29,10 @@ router.get('/download-encrypted/:filename', (req, res) => {
   res.download(filePath);
 });
 
-// Anahtar dosyasının indirilmesi için GET isteği
-router.get('/download-key/:filename', (req, res) => {
-  const filename = req.params.filename;
-  const filePath = path.join(__dirname, '../../encrypted', `${filename}_key.txt`);
-  res.download(filePath);
-});
-
 // Decrypted dosyanın indirilmesi için GET isteği
 router.get('/download-decrypted/:filename', (req, res) => {
   const filename = req.params.filename;
-  const filePath = path.join(__dirname, '../../decrypted', `${filename}_decrypted.txt`);
-  res.download(filePath);
-});
-
-// IV dosyasının indirilmesi için GET isteği
-router.get('/download-iv/:filename', (req, res) => {
-  const filename = req.params.filename;
-  const filePath = path.join(__dirname, '../../encrypted', `${filename}_iv.txt`);
+  const filePath = path.join(__dirname, '../../decrypted', `${filename}_decrypted.json`);
   res.download(filePath);
 });
 
@@ -58,16 +55,14 @@ router.post('/encrypt-collection', upload.single('databaseFile'), async (req, re
 // JSON dosyasındaki şifrelenmiş verilerin çözülmesi için POST isteği
 router.post('/decrypt-collection', upload.single('encryptedFile'), async (req, res) => {
   try {
-    const encryptedFileName = req.file; // Şifreli dosya yolunu al
-    const decryptionKey = req.body.decryptionKey; // Şifre çözme anahtarını al
-    const decryptionIV = req.body.decryptionIV; // Şifre çözme IV değerini al
-    const decryptionAlgorithm = req.body.decryptionAlgorithm; // Şifre çözme algoritmasını al
+    const encryptedFile = req.file; // Get encrypted file info
+    const decryptionAlgorithm = req.body.decryptionAlgorithm; // Get decryption algorithm
 
-    // decryptController üzerinden doğru parametrelerle decryptData fonksiyonunu çağır
-    await decryptController.decryptData(encryptedFileName, decryptionAlgorithm, decryptionKey, decryptionIV);
+    // Call decryptData function from decryptController with correct parameters
+    const decryptedData = await decryptController.decryptData(encryptedFile, decryptionAlgorithm);
     
-    // Decrypted dosyanın adını yanıt olarak gönder
-    res.json({ filename: decryptController.filename });
+    // Send the name of the decrypted file as a response
+    res.json({ filename: encryptedFile.filename });
   } catch (error) {
     res.status(500).send({ error: error.message });
   }

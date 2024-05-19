@@ -10,41 +10,31 @@ const algorithms = {
 
 async function encryptData(jsonDataFileName, encryptionAlgorithm) {
   try {
-    console.log('-------- Şifreleme İşlemi Başladı --------');
-    console.log('Dosya Adı:', jsonDataFileName.filename);
-    console.log('Şifreleme Algoritması:', encryptionAlgorithm);
+    console.log('\n-------- Şifreleme İşlemi Başladı --------\n');
+    console.log('Dosya Adı:', jsonDataFileName.filename + "\n");
+    console.log('Şifreleme Algoritması:', encryptionAlgorithm + "\n");
 
-    const jsonDataBuffer = await fs.readFile(`uploads/${jsonDataFileName.filename}`);
+    const jsonDataBuffer = await fs.readFile(path.join(__dirname, `../../uploads/${jsonDataFileName.filename}`));
     const jsonString = jsonDataBuffer.toString();
-    console.log('Okunan JSON Verisi:', jsonString);
+    console.log('Okunan JSON Verisi:', jsonString); // Dosyadan okunan ham veriyi konsola yazdır
 
     const jsonData = JSON.parse(jsonString);
-    console.log('Parse Edilmiş JSON Verisi:', jsonData);
+    console.log('Parse Edilmiş JSON Verisi:', jsonData + "\n"); // Parse edilmiş (JS nesnesine dönüştürülmüş) veriyi konsola yazdır.
 
     const algorithm = algorithms[encryptionAlgorithm];
     if (!algorithm) {
       throw new Error('Geçersiz şifreleme algoritması');
     }
 
-    const result = await algorithm.encrypt(jsonData);
-    console.log('Şifrelenmiş Veri:', result.encryptedData.toString('hex')); // Hex formatında konsola yazdır
-    console.log('Anahtar:', result.key);
-    if (result.iv) {
-      console.log('IV:', result.iv);
-    }
+    const encryptedData = await algorithm.encrypt(jsonData);
+    console.log('Şifrelenmiş Veri:', encryptedData); // Hex formatında konsola yazdır
 
     const encryptedFilePath = path.join(__dirname, `../../encrypted/${jsonDataFileName.filename}_encrypted.txt`);
-    const keyFilePath = path.join(__dirname, `../../encrypted/${jsonDataFileName.filename}_key.txt`);
-    const ivFilePath = path.join(__dirname, `../../encrypted/${jsonDataFileName.filename}_iv.txt`);
 
-    await Promise.all([
-      fs.writeFile(encryptedFilePath, result.encryptedData.toString('hex'), 'hex'), // Hex encoding ile yaz
-      fs.writeFile(keyFilePath, result.key, 'utf-8'), 
-      fs.writeFile(ivFilePath, result.iv, 'utf-8'), 
-    ]);
+    await fs.writeFile(encryptedFilePath, encryptedData); // Hex encoding ile yaz
 
-    console.log('-------- Şifreleme İşlemi Tamamlandı --------');
-    return result.encryptedData;
+    console.log('\n-------- Şifreleme İşlemi Tamamlandı --------\n');
+    return encryptedData;
   } catch (error) {
     console.error('Şifreleme Hatası:', error);
     throw error;

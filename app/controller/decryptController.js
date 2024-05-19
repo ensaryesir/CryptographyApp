@@ -8,32 +8,29 @@ const algorithms = {
   'RSA': require('../../algorithms/asymmetric/rsa'),
 };
 
-async function decryptData(encryptedFileName, decryptionAlgorithm, decryptionKey, decryptionIV) {
+async function decryptData(encryptedFileName, decryptionAlgorithm) {
   try {
-    console.log('-------- Şifre Çözme İşlemi Başladı --------');
-    console.log('Dosya Adı:', encryptedFileName.filename);
-    console.log('Şifre Çözme Algoritması:', decryptionAlgorithm);
-    console.log('Anahtar:', decryptionKey);
-    console.log('IV:', decryptionIV);
+    console.log('\n-------- Şifre Çözme İşlemi Başladı --------\n');
+    console.log('Dosya Adı:', encryptedFileName.filename + "\n");
+    console.log('Şifre Çözme Algoritması:', decryptionAlgorithm + "\n");
 
     const encryptedFilePath = path.join(__dirname, `../../uploads/${encryptedFileName.filename}`);
-    const encryptedDataBuffer = await fs.readFile(encryptedFilePath, 'utf8');
-    const encryptedData = Buffer.from(encryptedDataBuffer, 'hex'); // Hex'ten Buffer'a dönüştür
+    const encryptedData = await fs.readFile(encryptedFilePath, 'utf8'); // Read as 'utf8' to get a string
 
     const algorithm = algorithms[decryptionAlgorithm];
     if (!algorithm) {
       throw new Error('Geçersiz şifre çözme algoritması');
     }
 
-    const decryptedData = await algorithm.decrypt(encryptedData, decryptionKey, decryptionIV);
-    console.log('Çözülmüş Veri:', decryptedData);
+    const decryptedData = await algorithm.decrypt(encryptedData);
+    console.log('\nÇözülmüş Veri:', decryptedData);
 
     // Çözülmüş veriyi istediğiniz şekilde kullanabilirsiniz.
     // Örneğin, JSON dosyasına kaydedebilirsiniz:
     const decryptedFilePath = path.join(__dirname, `../../decrypted/${encryptedFileName.filename}_decrypted.json`);
-    await fs.writeFile(decryptedFilePath, JSON.stringify(decryptedData, null, 2), 'utf-8');
+    await fs.writeFile(decryptedFilePath, JSON.stringify(decryptedData, null, 2), 'utf8');
 
-    console.log('-------- Şifre Çözme İşlemi Tamamlandı --------');
+    console.log('\n-------- Şifre Çözme İşlemi Tamamlandı --------\n');
     return decryptedData;
   } catch (error) {
     console.error('Şifre Çözme Hatası:', error);
