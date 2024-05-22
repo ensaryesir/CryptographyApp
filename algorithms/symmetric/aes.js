@@ -2,8 +2,10 @@ const crypto = require('crypto');
 const fs = require('fs').promises;
 
 // Define key and iv as constants
+console.time('AES Key and IV Generation Time');
 const key = Buffer.from('0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef', 'hex'); // AES için 256 bit anahtar (32 byte)
 const iv = Buffer.from('0123456789abcdef0123456789abcdef', 'hex'); // AES için 128 bit IV (16 byte)
+console.timeEnd('AES Key and IV Generation Time');
 
 async function encrypt(jsonData) {
   try {

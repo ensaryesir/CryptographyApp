@@ -211,6 +211,8 @@
                       <option value="TDEA">TDEA</option>
                       <option value="ECC">ECC</option>
                       <option value="RSA">RSA</option>
+                      <option value="CHACHA20">CHACHA20</option>
+                      <option value="TWOFISH">TWOFISH</option>
                     </select>
                   </div>
                   <button type="submit" class="btn btn-primary">Encrypt</button>
@@ -246,8 +248,6 @@
         if (this.status == 200) {
           var filename = JSON.parse(this.response).filename;
           var encryptedLink = '/download-encrypted/' + filename;
-          var keyLink = '/download-key/' + filename;
-          var ivLink = '/download-iv/' + filename; // Added line for IV download
           
           // indirme linklerini oluştur ve sayfaya ekle
           document.getElementById('encryptedDownloadLink').href = encryptedLink;
@@ -291,6 +291,8 @@
                       <option value="TDEA">TDEA</option>
                       <option value="ECC">ECC</option>
                       <option value="RSA">RSA</option>
+                      <option value="CHACHA20">CHACHA20</option>
+                      <option value="TWOFISH">TWOFISH</option>
                     </select>
                   </div>
                   <button type="submit" class="btn btn-primary">Decrypt</button>

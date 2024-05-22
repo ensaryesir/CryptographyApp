@@ -6,6 +6,8 @@ const algorithms = {
   'TDEA': require('../../algorithms/symmetric/tdea'),
   'ECC': require('../../algorithms/asymmetric/ecc'),
   'RSA': require('../../algorithms/asymmetric/rsa'),
+  'CHACHA20': require('../../algorithms/symmetric/chacha20'),
+  'TWOFISH': require('../../algorithms/symmetric/twofish'),
 };
 
 async function encryptData(jsonDataFileName, encryptionAlgorithm) {

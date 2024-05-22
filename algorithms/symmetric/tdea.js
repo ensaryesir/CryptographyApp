@@ -1,8 +1,10 @@
 const crypto = require('crypto');
 
 // Define key and iv as constants
+console.time('TDEA Key and IV Generation Time');
 const key = Buffer.from('0123456789abcdef0123456789abcdef0123456789abcdef', 'hex'); // TDEA için 192 bit anahtar (24 byte)
 const iv = Buffer.from('0123456789abcdef', 'hex'); // TDEA için 64 bit IV (8 byte)
+console.timeEnd('TDEA Key and IV Generation Time');
 
 async function encrypt(jsonData) {
   try {
