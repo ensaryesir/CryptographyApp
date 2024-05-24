@@ -1,25 +1,44 @@
 const crypto = require('crypto');
+const { performance } = require('perf_hooks');
+const os = require('os');
 
 // Define key and iv as constants
-console.time('TDEA Key and IV Generation Time');
+const startKeyGen = performance.now();
+
 const key = Buffer.from('0123456789abcdef0123456789abcdef0123456789abcdef', 'hex'); // TDEA için 192 bit anahtar (24 byte)
 const iv = Buffer.from('0123456789abcdef', 'hex'); // TDEA için 64 bit IV (8 byte)
-console.timeEnd('TDEA Key and IV Generation Time');
+
+const endKeyGen = performance.now();
+
+console.log(`TDEA Key and IV generation took ${endKeyGen - startKeyGen} ms.`);
+
+function printPerformance() {
+    const used = process.memoryUsage().heapUsed / 1024 / 1024;
+    console.log(`Memory usage: ${Math.round(used * 100) / 100} MB`);
+
+    const cpus = os.cpus();
+    let totalIdle = 0, totalTick = 0;
+    for (let cpu of cpus) {
+      for (let type in cpu.times) {
+        totalTick += cpu.times[type];
+      } 
+      totalIdle += cpu.times.idle;
+    }
+    const cpuUsage = 1 - totalIdle / totalTick;
+    console.log(`CPU usage: ${(cpuUsage * 100).toFixed(2)}%\n`);
+}
 
 async function encrypt(jsonData) {
   try {
-    console.time('TDEA Encryption Time');
-    const initialMemoryUsage = process.memoryUsage().heapUsed;
-    const startCpuUsage = process.cpuUsage();
+    const start = performance.now();
 
     const cipher = crypto.createCipheriv('des-ede3-cbc', key, iv);
     let encryptedData = cipher.update(Buffer.from(JSON.stringify(jsonData), 'utf8'));
     encryptedData = Buffer.concat([encryptedData, cipher.final()]);
 
-    console.timeEnd('TDEA Encryption Time');
-    console.log('TDEA Encryption Memory Usage:', process.memoryUsage().heapUsed - initialMemoryUsage, 'bytes');
-    const cpuUsage = process.cpuUsage(startCpuUsage);
-    console.log('TDEA Encryption CPU Usage:', cpuUsage.user + cpuUsage.system, 'microseconds' + "\n");
+    const end = performance.now();
+    console.log(`TDEA Encryption took ${end - start} milliseconds.`);
+    printPerformance();
 
     return encryptedData.toString('hex'); // Convert encryptedData to hexadecimal string
   } catch (error) {
@@ -30,18 +49,15 @@ async function encrypt(jsonData) {
 
 async function decrypt(encryptedData) {
   try {
-    console.time('TDEA Decryption Time');
-    const initialMemoryUsage = process.memoryUsage().heapUsed;
-    const startCpuUsage = process.cpuUsage();
+    const start = performance.now();
 
     const decipher = crypto.createDecipheriv('des-ede3-cbc', key, iv);
     let decryptedData = decipher.update(Buffer.from(encryptedData, 'hex')); // Convert encryptedData from hexadecimal string to Buffer
     decryptedData = Buffer.concat([decryptedData, decipher.final()]);
 
-    console.timeEnd('TDEA Decryption Time');
-    console.log('TDEA Decryption Memory Usage:', process.memoryUsage().heapUsed - initialMemoryUsage, 'bytes');
-    const cpuUsage = process.cpuUsage(startCpuUsage);
-    console.log('TDEA Decryption CPU Usage:', cpuUsage.user + cpuUsage.system, 'microseconds');
+    const end = performance.now();
+    console.log(`TDEA Decryption took ${end - start} milliseconds.`);
+    printPerformance();
 
     return JSON.parse(decryptedData.toString('utf8')); // Convert to JSON object
   } catch (error) {
@@ -54,7 +70,4 @@ async function decrypt(encryptedData) {
   }
 }
 
-module.exports = {
-  encrypt,
-  decrypt
-};
+module.exports = { encrypt, decrypt };

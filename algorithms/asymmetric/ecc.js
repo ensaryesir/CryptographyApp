@@ -1,75 +1,82 @@
-// const crypto = require('crypto');
+const crypto = require('crypto');
+const { performance } = require('perf_hooks');
+const os = require('os');
 
-// // Define keys
-// console.time('ECC Public-Private Key and IV Generation Time');
+// Create an ECDH key pair for ecdh
+const startKeyGen = performance.now();
 
-// const privateKeyStr = `
-// -----BEGIN EC PRIVATE KEY-----
-// MHQCAQEEIPRyBvvEFg7uZcQhESeN5U3z32DsgCODLkKSVfpwmcPBoAcGBSuBBAAK
-// oUQDQgAEwPXoC7IWbMEpBW1RnU/35upWxAgGe7mp4b7jv5BTWOrhzMWBXdiLFZIO
-// 5e+Anc03DWNytPuGZuSIO9iiEE+KvA==
-// -----END EC PRIVATE KEY-----
-// `;
+// Manually defined keys for ecdh
+const privateKeyStr = 'b37c4f7a4c92a40e2e8c5c6e2ec3f4d8b1e8f96c5d6b2c4c5e2e8c5c6e2ec3f4';
+const ecdh = crypto.createECDH('secp256k1');
+ecdh.setPrivateKey(privateKeyStr, 'hex');
+const endKeyGen = performance.now();
 
-// const publicKeyStr = `
-// -----BEGIN PUBLIC KEY-----
-// MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAEwPXoC7IWbMEpBW1RnU/35upWxAgGe7mp
-// 4b7jv5BTWOrhzMWBXdiLFZIO5e+Anc03DWNytPuGZuSIO9iiEE+KvA==
-// -----END PUBLIC KEY-----
-// `;
+// Create an ECDH key pair for ecdh2
+const startKeyGen2 = performance.now();
 
-// // Create an ECDH key pair
-// const ecdh = crypto.createECDH('secp256k1');
-// ecdh.setPrivateKey(privateKeyStr, 'base64');
+// Manually defined keys for ecdh2
+const privateKeyStr2 = 'c37c4f7a4c92a40e2e8c5c6e2ec3f4d8b1e8f96c5d6b2c4c5e2e8c5c6e2ec3f5';
+const ecdh2 = crypto.createECDH('secp256k1');
+ecdh2.setPrivateKey(privateKeyStr2, 'hex');
+const endKeyGen2 = performance.now();
 
-// // Compute the symmetric key and convert to Buffer
-// const symmetricKey = ecdh.computeSecret(publicKeyStr, 'base64', 'hex');
-// const symmetricKeyBuffer = Buffer.from(symmetricKey, 'hex');
+// Compute the symmetric key and convert to Buffer
+const symmetricKey = ecdh.computeSecret(ecdh2.getPublicKey(), null, 'hex');
+const symmetricKeyBuffer = Buffer.from(symmetricKey, 'hex');
 
-// // Define IV and convert to Buffer
-// const IVStr = '194fbed636c9d71a222d721f13e6e541';  // This should be a 16-byte value
-// const IV = Buffer.from(IVStr, 'hex');
-// console.timeEnd('ECC Public-Private Key and IV Generation Time');
+// Manually define IV and convert to Buffer
+const IVStr = '194fbed636c9d71a222d721f13e6e541';  // This should be a 16-byte value
+const IV = Buffer.from(IVStr, 'hex');
 
-// function encrypt(jsonData) {
-//   console.time('Encryption Time');
-//   const initialMemoryUsage = process.memoryUsage().heapUsed;
-//   const startCpuUsage = process.cpuUsage();
+console.log(`ECC Key generation took ${endKeyGen - startKeyGen} ms.`);
+console.log(`ECC Key generation 2 took ${endKeyGen2 - startKeyGen2} ms.`);
 
-//   const buffer = Buffer.from(JSON.stringify(jsonData), 'utf8');
-//   const cipher = crypto.createCipheriv('aes-256-cbc', symmetricKeyBuffer, IV);
-//   let encrypted = cipher.update(buffer);
-//   encrypted = Buffer.concat([encrypted, cipher.final()]);
+function printPerformance() {
+    const used = process.memoryUsage().heapUsed / 1024 / 1024;
+    console.log(`Memory usage: ${Math.round(used * 100) / 100} MB`);
+  
+    const cpus = os.cpus();
+    let totalIdle = 0, totalTick = 0;
+    for (let cpu of cpus) {
+      for (let type in cpu.times) {
+        totalTick += cpu.times[type];
+      } 
+      totalIdle += cpu.times.idle;
+    }
+    const cpuUsage = 1 - totalIdle / totalTick;
+    console.log(`CPU usage: ${(cpuUsage * 100).toFixed(2)}%\n`);
+  }
+  
+  function encrypt(jsonData) {
+    const start = performance.now();
 
-//   console.timeEnd('Encryption Time');
-//   console.log('Encryption Memory Usage:', process.memoryUsage().heapUsed - initialMemoryUsage, 'bytes');
-//   const cpuUsage = process.cpuUsage(startCpuUsage);
-//   console.log('Encryption CPU Usage:', cpuUsage.user + cpuUsage.system, 'microseconds');
+    const buffer = Buffer.from(JSON.stringify(jsonData), 'utf8');
+    const cipher = crypto.createCipheriv('aes-256-cbc', symmetricKeyBuffer, IV);
+    let encrypted = cipher.update(buffer);
+    encrypted = Buffer.concat([encrypted, cipher.final()]);
 
-//   return IV.toString('hex') + ':' + encrypted.toString('hex');
-// }
+    const end = performance.now();
+    console.log(`Encryption took ${end - start} milliseconds.`);
+    printPerformance();
 
-// function decrypt(encryptedData) {
-//   console.time('Decryption Time');
-//   const initialMemoryUsage = process.memoryUsage().heapUsed;
-//   const startCpuUsage = process.cpuUsage();
+    return IV.toString('hex') + ':' + encrypted.toString('hex');
+  }
+  
+  function decrypt(encryptedData) {
+    const start = performance.now();
 
-//   const textParts = encryptedData.split(':');
-//   const iv = Buffer.from(textParts.shift(), 'hex');
-//   const encryptedText = Buffer.from(textParts.join(':'), 'hex');
-//   const decipher = crypto.createDecipheriv('aes-256-cbc', symmetricKeyBuffer, iv);
-//   let decrypted = decipher.update(encryptedText);
-//   decrypted = Buffer.concat([decrypted, decipher.final()]);
+    const parts = encryptedData.split(':');
+    const iv = Buffer.from(parts.shift(), 'hex');
+    const encryptedText = Buffer.from(parts.join(':'), 'hex');
+    const decipher = crypto.createDecipheriv('aes-256-cbc', symmetricKeyBuffer, iv);
+    let decrypted = decipher.update(encryptedText);
+    decrypted = Buffer.concat([decrypted, decipher.final()]);
 
-//   console.timeEnd('Decryption Time');
-//   console.log('Decryption Memory Usage:', process.memoryUsage().heapUsed - initialMemoryUsage, 'bytes');
-//   const cpuUsage = process.cpuUsage(startCpuUsage);
-//   console.log('Decryption CPU Usage:', cpuUsage.user + cpuUsage.system, 'microseconds');
+    const end = performance.now();
+    console.log(`Decryption took ${end - start} milliseconds.`);
+    printPerformance();
+    
+    return JSON.parse(decrypted.toString());
+  }
 
-//   return JSON.parse(decrypted.toString());
-// }
-
-// module.exports = {
-//   encrypt,
-//   decrypt
-// };
+module.exports = { encrypt, decrypt };

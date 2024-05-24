@@ -17,7 +17,7 @@ let connected = false;
 
 client.connect()
   .then(() => {
-    console.log("MongoDB bağlantısı başarılı.");
+    console.log("MongoDB bağlantısı başarılı.\n");
     connected = true;
   })
   .catch((error) => {
@@ -48,5 +48,5 @@ app.use("/public", express.static(path.join(__dirname, "public"))); // Accessing
 
 // Start the server
 app.listen(port, () => {
-  console.log(`Web uygulamanız ${port} portunda çalışıyor.`);
+  console.log(`\nWeb uygulamanız ${port} portunda çalışıyor.`);
 });

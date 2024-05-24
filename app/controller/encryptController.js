@@ -6,8 +6,7 @@ const algorithms = {
   'TDEA': require('../../algorithms/symmetric/tdea'),
   'ECC': require('../../algorithms/asymmetric/ecc'),
   'RSA': require('../../algorithms/asymmetric/rsa'),
-  'CHACHA20': require('../../algorithms/symmetric/chacha20'),
-  'TWOFISH': require('../../algorithms/symmetric/twofish'),
+  'CHACHA20': require('../../algorithms/symmetric/chacha20')
 };
 
 async function encryptData(jsonDataFileName, encryptionAlgorithm) {
@@ -21,7 +20,7 @@ async function encryptData(jsonDataFileName, encryptionAlgorithm) {
     console.log('Okunan JSON Verisi:', jsonString); // Dosyadan okunan ham veriyi konsola yazdır
 
     const jsonData = JSON.parse(jsonString);
-    console.log('Parse Edilmiş JSON Verisi:', jsonData + "\n"); // Parse edilmiş (JS nesnesine dönüştürülmüş) veriyi konsola yazdır.
+    // console.log('Parse Edilmiş JSON Verisi:', jsonData + "\n"); // Parse edilmiş (JS nesnesine dönüştürülmüş) veriyi konsola yazdır.
 
     const algorithm = algorithms[encryptionAlgorithm];
     if (!algorithm) {

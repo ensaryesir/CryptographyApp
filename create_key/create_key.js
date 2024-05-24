@@ -16,9 +16,7 @@
 // console.log('Public Key:', publicKey);
 // console.log('Private Key:', privateKey);
 
-
 ////////////////////////////////////////////////////////////////////////
-
 
 // const crypto = require('crypto');
 
@@ -37,7 +35,6 @@
 
 // console.log('Public Key:', publicKey);
 // console.log('Private Key:', privateKey);
-
 
 ////////////////////////////////////////////////////////////////////////
 

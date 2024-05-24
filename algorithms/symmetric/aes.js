@@ -1,26 +1,44 @@
 const crypto = require('crypto');
-const fs = require('fs').promises;
+const { performance } = require('perf_hooks');
+const os = require('os');
 
 // Define key and iv as constants
-console.time('AES Key and IV Generation Time');
+const startKeyGen = performance.now();
+
 const key = Buffer.from('0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef', 'hex'); // AES için 256 bit anahtar (32 byte)
 const iv = Buffer.from('0123456789abcdef0123456789abcdef', 'hex'); // AES için 128 bit IV (16 byte)
-console.timeEnd('AES Key and IV Generation Time');
+
+const endKeyGen = performance.now();
+
+console.log(`AES Key and IV generation took ${endKeyGen - startKeyGen} ms.`);
+
+function printPerformance() {
+    const used = process.memoryUsage().heapUsed / 1024 / 1024;
+    console.log(`Memory usage: ${Math.round(used * 100) / 100} MB`);
+
+    const cpus = os.cpus();
+    let totalIdle = 0, totalTick = 0;
+    for (let cpu of cpus) {
+      for (let type in cpu.times) {
+        totalTick += cpu.times[type];
+      } 
+      totalIdle += cpu.times.idle;
+    }
+    const cpuUsage = 1 - totalIdle / totalTick;
+    console.log(`CPU usage: ${(cpuUsage * 100).toFixed(2)}%\n`);
+}
 
 async function encrypt(jsonData) {
   try {
-    console.time('AES Encryption Time');
-    const initialMemoryUsage = process.memoryUsage().heapUsed;
-    const startCpuUsage = process.cpuUsage();
+    const start = performance.now();
 
     const cipher = crypto.createCipheriv('aes-256-cbc', key, iv);
     let encryptedData = cipher.update(Buffer.from(JSON.stringify(jsonData), 'utf8'));
     encryptedData = Buffer.concat([encryptedData, cipher.final()]);
 
-    console.timeEnd('AES Encryption Time');
-    console.log('AES Encryption Memory Usage:', process.memoryUsage().heapUsed - initialMemoryUsage, 'bytes');
-    const cpuUsage = process.cpuUsage(startCpuUsage);
-    console.log('AES Encryption CPU Usage:', cpuUsage.user + cpuUsage.system, 'microseconds' + "\n");
+    const end = performance.now();
+    console.log(`AES Encryption took ${end - start} milliseconds.`);
+    printPerformance();
 
     return encryptedData.toString('hex'); // Convert encryptedData to hexadecimal string
   } catch (error) {
@@ -31,18 +49,15 @@ async function encrypt(jsonData) {
 
 async function decrypt(encryptedData) {
   try {
-    console.time('AES Decryption Time');
-    const initialMemoryUsage = process.memoryUsage().heapUsed;
-    const startCpuUsage = process.cpuUsage();
+    const start = performance.now();
 
     const decipher = crypto.createDecipheriv('aes-256-cbc', key, iv);
     let decryptedData = decipher.update(Buffer.from(encryptedData, 'hex')); // Convert encryptedData from hexadecimal string to Buffer
     decryptedData = Buffer.concat([decryptedData, decipher.final()]);
 
-    console.timeEnd('AES Decryption Time');
-    console.log('AES Decryption Memory Usage:', process.memoryUsage().heapUsed - initialMemoryUsage, 'bytes');
-    const cpuUsage = process.cpuUsage(startCpuUsage);
-    console.log('AES Decryption CPU Usage:', cpuUsage.user + cpuUsage.system, 'microseconds');
+    const end = performance.now();
+    console.log(`AES Decryption took ${end - start} milliseconds.`);
+    printPerformance();
 
     return JSON.parse(decryptedData.toString('utf8')); // Convert to JSON object
   } catch (error) {
@@ -55,7 +70,4 @@ async function decrypt(encryptedData) {
   }
 }
 
-module.exports = {
-  encrypt,
-  decrypt
-};
+module.exports = { encrypt,decrypt };

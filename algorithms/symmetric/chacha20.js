@@ -1,26 +1,44 @@
-const chacha = require('chacha-native');
-const crypto = require('crypto');
+const chacha = require('chacha');
+const { performance } = require('perf_hooks');
+const os = require('os');
 
 // Define key and nonce as constants
-console.time('ChaCha20 Key and Nonce Generation Time');
+const startKeyGen = performance.now();
+
 const key = Buffer.from('81c4a227017dbd2c4e211979f94c28609413b108088e63660b00c7a79d086ba9', 'hex'); // ChaCha20 için 256 bit anahtar (32 byte)
 const nonce = Buffer.from('3a4d17813d319eadd8a6fe7e', 'hex'); // ChaCha20 için 64 bit nonce (8 byte)
-console.timeEnd('ChaCha20 Key and Nonce Generation Time');
+
+const endKeyGen = performance.now();
+
+console.log(`ChaCha20 Key and Nonce generation took ${endKeyGen - startKeyGen} ms.`);
+
+function printPerformance() {
+  const used = process.memoryUsage().heapUsed / 1024 / 1024;
+  console.log(`Memory usage: ${Math.round(used * 100) / 100} MB`);
+
+  const cpus = os.cpus();
+  let totalIdle = 0, totalTick = 0;
+  for (let cpu of cpus) {
+    for (let type in cpu.times) {
+      totalTick += cpu.times[type];
+    } 
+    totalIdle += cpu.times.idle;
+  }
+  const cpuUsage = 1 - totalIdle / totalTick;
+  console.log(`CPU usage: ${(cpuUsage * 100).toFixed(2)}%\n`);
+}
 
 async function encrypt(jsonData) {
   try {
-    console.time('ChaCha20 Encryption Time');
-    const initialMemoryUsage = process.memoryUsage().heapUsed;
-    const startCpuUsage = process.cpuUsage();
+    const start = performance.now();
 
     const cipher = chacha.createCipher(key, nonce);
     let encryptedData = cipher.update(Buffer.from(JSON.stringify(jsonData), 'utf8'));
     encryptedData = Buffer.concat([encryptedData, cipher.final()]);
 
-    console.timeEnd('ChaCha20 Encryption Time');
-    console.log('ChaCha20 Encryption Memory Usage:', process.memoryUsage().heapUsed - initialMemoryUsage, 'bytes');
-    const cpuUsage = process.cpuUsage(startCpuUsage);
-    console.log('ChaCha20 Encryption CPU Usage:', cpuUsage.user + cpuUsage.system, 'microseconds');
+    const end = performance.now();
+    console.log(`ChaCha20 Encryption took ${end - start} milliseconds.`);
+    printPerformance();
 
     return encryptedData.toString('hex'); // Convert encryptedData to hexadecimal string
   } catch (error) {
@@ -31,19 +49,18 @@ async function encrypt(jsonData) {
 
 async function decrypt(encryptedData) {
   try {
-    console.time('ChaCha20 Decryption Time');
-    const initialMemoryUsage = process.memoryUsage().heapUsed;
-    const startCpuUsage = process.cpuUsage();
+    const start = performance.now();
+
     const decipher = chacha.createDecipher(key, nonce);
     
     // Düzeltme: decipher.final() çağrısını kaldırın
     let decryptedData = Buffer.from(decipher.update(Buffer.from(encryptedData, 'hex'))); // Convert encryptedData from hexadecimal string to Buffer
     decryptedData = Buffer.concat([decryptedData]); // Şifre çözme işlemini tamamla
     
-    console.timeEnd('ChaCha20 Decryption Time');
-    console.log('ChaCha20 Decryption Memory Usage:', process.memoryUsage().heapUsed - initialMemoryUsage, 'bytes');
-    const cpuUsage = process.cpuUsage(startCpuUsage);
-    console.log('ChaCha20 Decryption CPU Usage:', cpuUsage.user + cpuUsage.system, 'microseconds');
+    const end = performance.now();
+    console.log(`ChaCha20 Decryption took ${end - start} milliseconds.`);
+    printPerformance();
+
     return JSON.parse(decryptedData.toString('utf8'));
   } catch (error) {
     console.error('Deşifreleme Hatası:', error);
@@ -51,7 +68,4 @@ async function decrypt(encryptedData) {
   }
 }
 
-module.exports = {
-  encrypt,
-  decrypt
-};
+module.exports = { encrypt, decrypt };
